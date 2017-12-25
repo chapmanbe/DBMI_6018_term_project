@@ -33,7 +33,8 @@ def make_age_data(file_address):
 
     # make data frame with FPKM data from each age
     all_exp = pd.merge(P5, P15, on="eID", how="outer")
-    all_exp = pd.merge(all_exp, Adult, on="eID", how="outer")  # note this has nans
+    all_exp = pd.merge(all_exp, Adult, on="eID", how="outer")
+    # set index to eIDs
     all_exp.set_index("eID", inplace=True)
 
     # clustermap won't take nans, so replace them with 0

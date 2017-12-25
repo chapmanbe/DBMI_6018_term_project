@@ -1,47 +1,24 @@
 # -*- coding: utf-8 -*-
 """
-define gene class
-define P5, P15, and Adult classes, which inherit from gene class
+define basic_gene class for gene names
+define gene class for analyzing AEE status
+define ontology class for analyzing functional annotation
 """
 
 
-# gene class defines all attributes and methods for genes
-# there should never be instances of gene
-class gene(object):
-    """creates a gene object"""
-    def __init__(self,
-                 name=None,
-                 eID=None,
-                 chro=None,
-                 tissue=None,
-                 age=None,
-                 FPKM=None,
-                 obs_corr=None,
-                 bcv=None,
-                 upperCI=None,
-                 lowerCI=None,
-                 **kwargs):
-        super(gene, self).__init__(**kwargs)
+import pandas as pd
+
+
+# creates a gene object with an eID and a name
+class basic_gene(object):
+    """creates a basic gene object with eID and name"""
+
+    def __init__(self, name=None, eID=None, **kwargs):
+        super(basic_gene, self).__init__(**kwargs)
         self.name = name
         self.eID = eID
-        self.chro = chro
-        self.tissue = tissue
-        self.age = age
-        # counts per million for SNP aligning reads
-        # presented as the mean across all replicates
-        self.FPKM = FPKM
-        # Pearson correlation
-        # for observed maternal and paternal allele co-expression
-        self.obs_corr = obs_corr
-        # biological coefficient of variation
-        # calculated using edgeR across all replicates
-        self.bcv = bcv
-        # lower limit of allele correlation 95% CI computed from modeling
-        self.upperCI = upperCI
-        # upper limit of allele correlation 95% CI computed from modeling
-        self.lowerCI = lowerCI
 
-# each attribute entered in the constructor needs a getter and setter
+    # each attribute entered in the constructor needs a getter and setter
     @property
     def name(self):
         return self.__name
@@ -64,6 +41,43 @@ class gene(object):
         else:
             raise TypeError("Ensembl ID must be a string.")
 
+    def __str__(self):
+        return "%s (%s)" % (self.eID, self.name)
+
+
+# gene class inherits from basic_gene
+# adds attributes desirable for AEE analysis
+class gene(basic_gene):
+    """creates a gene object"""
+    def __init__(self,
+                 chro=None,
+                 tissue=None,
+                 age=None,
+                 FPKM=None,
+                 obs_corr=None,
+                 bcv=None,
+                 upperCI=None,
+                 lowerCI=None,
+                 **kwargs):
+        super(gene, self).__init__(**kwargs)
+        self.chro = chro
+        self.tissue = tissue
+        self.age = age
+        # counts per million for SNP aligning reads
+        # presented as the mean across all replicates
+        self.FPKM = FPKM
+        # Pearson correlation
+        # for observed maternal and paternal allele co-expression
+        self.obs_corr = obs_corr
+        # biological coefficient of variation
+        # calculated using edgeR across all replicates
+        self.bcv = bcv
+        # lower limit of allele correlation 95% CI computed from modeling
+        self.upperCI = upperCI
+        # upper limit of allele correlation 95% CI computed from modeling
+        self.lowerCI = lowerCI
+
+    # each attribute entered in the constructor needs a getter and setter
     @property
     def chro(self):
         return self.__chro
@@ -154,7 +168,7 @@ class gene(object):
         else:
             raise ValueError("lowerCI must be between -1 and 1.")
 
-# define getters for attributes not entered in the constructor
+    # define getters for attributes not entered in the constructor
     @property
     def CI_width(self):
         return abs(self.upperCI-self.lowerCI)
@@ -173,3 +187,26 @@ class gene(object):
 
     def __str__(self):
         return "%s (%s), at %s in the %s, is %s." % (self.eID, self.name, self.age, self.tissue, self.AEE)
+
+
+# ontology class inherits from basic_gene
+# adds functional annotation
+# not used as of 12/24/17
+class ontology(basic_gene):
+    """creates a gene object with functional annotation"""
+    def __init__(self, **kwargs):
+        super(ontology, self).__init__(**kwargs)
+
+    def fa(self, fad):
+        if isinstance(fad, pd.core.frame.DataFrame):
+            # extract the row of the gene by eID and make it be a series
+            fa_row = fad[fad["ID"] == self.eID].squeeze()
+        # create dictionary to store enrichments
+        # key = category/database, value = terms
+        terms = {}
+        for cat in list(fad.columns)[4:]:
+            terms[cat] = fa_row[cat]
+        self.fa = terms
+
+    def __str__(self):
+        return "%s (%s) has the functional enrichments" % (self.eID, self.name)+" "+str(self.fa)
